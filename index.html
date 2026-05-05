@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giuseppe Longo | AI Mediator & Software Engineer</title>
+    <style>
+        /* ========== RESET & BASE ========== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
+            background: #0a0a2e;
+            color: #e0e0e0;
+            overflow-x: hidden;
+            min-height: 100vh;
+            user-select: none;
+        }
+
+        #particle-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+
+        .background-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: 
+                radial-gradient(ellipse at 20% 50%, rgba(0,100,255,0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(0,200,255,0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(100,0,255,0.1) 0%, transparent 50%);
+            z-index: 1; pointer-events: none;
+        }
+
+        #card-overlay-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5,8,20,0.7); z-index: 90; opacity: 0; pointer-events: none;
+            transition: opacity 0.4s ease; backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+        }
+        #card-overlay-bg.visible { opacity: 1; pointer-events: auto; }
+
+        .main-content { position: relative; z-index: 2; max-width: 1400px; margin: 0 auto; padding: 2rem; }
+
+        /* ========== HEADER ========== */
+        header { text-align: center; padding: 4rem 0 3rem; }
+
+        .logo-ai {
+            width: 80px; height: 80px; margin: 0 auto 1.5rem; border: 2px solid #00d4ff;
+            border-radius: 20px; display: flex; align-items: center; justify-content: center;
+            background: rgba(0,150,255,0.1); backdrop-filter: blur(10px); animation: logoPulse 3s ease-in-out infinite;
+        }
+        .logo-ai svg { width: 45px; height: 45px; fill: #00d4ff; }
+
+        @keyframes logoPulse {
+            0%,100% { box-shadow: 0 0 20px rgba(0,180,255,0.3); }
+            50% { box-shadow: 0 0 50px rgba(0,220,255,0.6); }
+        }
+
+        h1 {
+            font-size: 3.5rem; font-weight: 700;
+            background: linear-gradient(135deg, #00d4ff, #7b2ff7, #00d4ff); background-size: 200% 200%;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            animation: gradientShift 4s ease infinite; margin-bottom: 0.5rem;
+        }
+        @keyframes gradientShift {
+            0%,100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .subtitle { font-size: 1.3rem; color: #90caf9; font-weight: 300; letter-spacing: 2px; text-transform: uppercase; }
+
+        .tag-container { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.8rem; margin-top: 1.5rem; }
+        .tag {
+            background: rgba(0,150,255,0.15); border: 1px solid rgba(0,180,255,0.3);
+            padding: 0.4rem 1.2rem; border-radius: 50px; font-size: 0.85rem; color: #90caf9;
+            backdrop-filter: blur(5px); transition: all 0.3s; cursor: default;
+        }
+        .tag:hover { background: rgba(0,180,255,0.25); border-color: #00d4ff; color: #fff; transform: translateY(-2px); }
+
+        /* ========== SEZIONE CARD COMPETENZE ========== */
+        .section-title {
+            font-size: 1.8rem; margin: 3rem 0 1.5rem; color: #00d4ff;
+            display: flex; align-items: center; gap: 1rem;
+        }
+        .section-title::before { content: ''; width: 40px; height: 2px; background: #00d4ff; }
+
+        .carousel-container { position: relative; margin: 2rem 0; overflow: hidden; }
+
+        .carousel-wrapper {
+            overflow-x: auto; overflow-y: hidden; display: flex; gap: 1.5rem;
+            padding: 1rem 2rem 2rem; scrollbar-width: none; -ms-overflow-style: none;
+            cursor: grab; user-select: none;
+        }
+        .carousel-wrapper::-webkit-scrollbar { display: none; }
+        .carousel-wrapper.active { cursor: grabbing; }
+        .carousel-wrapper.scroll-locked { overflow-x: hidden; }
+
+        /* ========== CARD ========== */
+        .project-card {
+            min-width: 300px; max-width: 340px; flex-shrink: 0; border-radius: 20px;
+            overflow: hidden; background: rgba(10,20,50,0.8); border: 1px solid rgba(0,150,255,0.2);
+            backdrop-filter: blur(20px); cursor: pointer; position: relative; z-index: 1;
+            pointer-events: auto; will-change: transform;
+            transition: transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275),
+                        border-color 0.4s ease, box-shadow 0.4s ease,
+                        opacity 0.5s ease, filter 0.5s ease;
+        }
+        .carousel-wrapper.active .project-card { pointer-events: none; }
+        .project-card:hover {
+            transform: translateY(-10px); border-color: #00d4ff;
+            box-shadow: 0 20px 60px rgba(0,100,255,0.3), 0 0 30px rgba(0,200,255,0.1) inset;
+        }
+        .project-card.active {
+            transform: scale(1.08) translateY(-20px) !important; z-index: 100 !important;
+            border-color: #00d4ff !important; border-width: 2px !important;
+            box-shadow: 0 30px 80px rgba(0,120,255,0.5), 0 0 60px rgba(0,200,255,0.3),
+                        0 0 120px rgba(0,180,255,0.2), 0 0 30px rgba(0,200,255,0.2) inset !important;
+            background: rgba(15,30,60,0.95) !important;
+            animation: cardFloatPulse 3s ease-in-out infinite;
+        }
+        @keyframes cardFloatPulse {
+            0%,100% { box-shadow: 0 30px 80px rgba(0,120,255,0.5), 0 0 60px rgba(0,200,255,0.3), 0 0 120px rgba(0,180,255,0.2), 0 0 30px rgba(0,200,255,0.2) inset; }
+            50% { box-shadow: 0 35px 90px rgba(0,140,255,0.6), 0 0 80px rgba(0,220,255,0.4), 0 0 150px rgba(0,200,255,0.3), 0 0 40px rgba(0,220,255,0.3) inset; }
+        }
+        .carousel-wrapper.has-active .project-card:not(.active) {
+            opacity: 0.45; filter: blur(2px); pointer-events: none !important; transform: scale(0.95);
+        }
+
+        .card-media { height: 170px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .card-media.bg-ai { background: linear-gradient(135deg, #0a1a3a, #0d2b5e, #0a1a3a); }
+        .card-media.bg-llm { background: linear-gradient(135deg, #0d1a3a, #1a2d5e, #0d1a3a); }
+        .card-media.bg-security { background: linear-gradient(135deg, #0a1a1a, #0d3a2e, #0a1a1a); }
+        .card-media.bg-network { background: linear-gradient(135deg, #1a0a2e, #2e1040, #1a0a2e); }
+        .card-media.bg-it { background: linear-gradient(135deg, #1a1a0a, #3a2e0d, #1a1a0a); }
+        .card-media.bg-cloud { background: linear-gradient(135deg, #0a1a2e, #0d2e40, #0a1a2e); }
+        .card-media.bg-dev { background: linear-gradient(135deg, #1a0a1a, #2e0d2e, #1a0a1a); }
+        .card-media.bg-mediation { background: linear-gradient(135deg, #0a1a2a, #1a2a3a, #0a1a2a); }
+        .card-media.bg-blockchain { background: linear-gradient(135deg, #1a100a, #3a200d, #1a100a); }
+        .card-media.bg-gdpr { background: linear-gradient(135deg, #0a1a3a, #0d2060, #0a1a3a); }
+
+        .skill-icon { width: 90px; height: 90px; opacity: 0.85; transition: all 0.5s; z-index: 3; position: relative; }
+        .project-card:hover .skill-icon { opacity: 1; transform: scale(1.1); }
+        .project-card.active .skill-icon { opacity: 1; transform: scale(1.2); }
+
+        .card-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to top, rgba(10,15,30,0.9) 0%, rgba(10,15,30,0.2) 50%, transparent 80%);
+            pointer-events: none; z-index: 2;
+        }
+        .card-content { padding: 1.5rem; position: relative; z-index: 2; }
+        .card-content h3 { font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; color: #fff; transition: color 0.4s; }
+        .project-card.active .card-content h3 { color: #00d4ff; font-size: 1.35rem; }
+        .card-content p { font-size: 0.85rem; color: #b0c8e0; line-height: 1.5; margin-bottom: 1rem; transition: color 0.4s; }
+        .project-card.active .card-content p { color: #d0e0f0; }
+        .card-tech-stack { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+        .card-tech-stack span {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            padding: 0.2rem 0.7rem; border-radius: 50px; font-size: 0.7rem; color: #90caf9; transition: all 0.4s;
+        }
+        .project-card.active .card-tech-stack span {
+            background: rgba(0,180,255,0.15); border-color: rgba(0,200,255,0.3); color: #00d4ff;
+        }
+
+        /* ========== SEZIONE CHI SONO (MODIFICATA) ========== */
+        .about-section { margin: 4rem 0 3rem; }
+
+        .about-container {
+            max-width: 900px; margin: 2rem auto 0; padding: 3rem;
+            background: rgba(10,20,50,0.7); border: 1px solid rgba(0,150,255,0.2);
+            border-radius: 24px; backdrop-filter: blur(15px); text-align: center;
+            position: relative; overflow: hidden;
+        }
+        .about-container::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px;
+            background: linear-gradient(90deg, transparent, #00d4ff, #7b2ff7, #00d4ff, transparent);
+            opacity: 0.8;
+        }
+        .about-icon { font-size: 3.5rem; margin-bottom: 1rem; display: block; }
+        .about-container h3 { font-size: 2rem; color: #fff; margin-bottom: 1.5rem; }
+        .about-container .glow-text { color: #00d4ff; font-weight: 600; }
+        .about-container p {
+            color: #b0c8e0; line-height: 2; font-size: 1.05rem; text-align: left;
+            max-width: 750px; margin: 0 auto;
+        }
+        .about-container p .highlight { color: #00d4ff; font-weight: 600; }
+        .about-divider {
+            width: 60px; height: 2px; background: linear-gradient(90deg, #00d4ff, #7b2ff7);
+            margin: 1.5rem auto; border-radius: 2px;
+        }
+
+        /* ========== TIMELINE ========== */
+        .timeline-section { margin: 4rem 0 2rem; }
+        .timeline { position: relative; max-width: 1000px; margin: 3rem auto 0; padding: 2rem 0; }
+        .timeline::before {
+            content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px;
+            background: linear-gradient(to bottom, transparent, rgba(0,180,255,0.3) 5%, rgba(0,200,255,0.6) 50%, rgba(0,180,255,0.3) 95%, transparent);
+            transform: translateX(-50%); box-shadow: 0 0 15px rgba(0,200,255,0.3);
+        }
+        .timeline-item {
+            position: relative; margin-bottom: 3rem; display: flex; align-items: flex-start;
+            opacity: 0; transform: translateY(30px); animation: fadeInUp 0.6s ease forwards;
+        }
+        .timeline-item:nth-child(1){animation-delay:0.05s}.timeline-item:nth-child(2){animation-delay:0.10s}
+        .timeline-item:nth-child(3){animation-delay:0.15s}.timeline-item:nth-child(4){animation-delay:0.20s}
+        .timeline-item:nth-child(5){animation-delay:0.25s}.timeline-item:nth-child(6){animation-delay:0.30s}
+        .timeline-item:nth-child(7){animation-delay:0.35s}
+        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+        .timeline-item:nth-child(odd){flex-direction:row}.timeline-item:nth-child(even){flex-direction:row-reverse}
+        .timeline-content {
+            width: 45%; background: rgba(10,20,50,0.8); border: 1px solid rgba(0,150,255,0.2);
+            border-radius: 16px; padding: 1.5rem; backdrop-filter: blur(15px);
+            transition: all 0.4s cubic-bezier(0.175,0.885,0.32,1.275); position: relative;
+        }
+        .timeline-content:hover { border-color: #00d4ff; box-shadow: 0 15px 40px rgba(0,100,255,0.25), 0 0 20px rgba(0,200,255,0.05) inset; transform: translateY(-5px); }
+        .timeline-item:nth-child(odd) .timeline-content::after { content:''; position:absolute; right:-10px; top:25px; border-top:10px solid transparent; border-bottom:10px solid transparent; border-left:10px solid rgba(0,150,255,0.2); }
+        .timeline-item:nth-child(even) .timeline-content::after { content:''; position:absolute; left:-10px; top:25px; border-top:10px solid transparent; border-bottom:10px solid transparent; border-right:10px solid rgba(0,150,255,0.2); }
+        .timeline-content h4 { font-size: 1.2rem; color: #fff; margin-bottom: 0.3rem; }
+        .timeline-company { color: #90caf9; font-size: 0.9rem; margin-bottom: 0.8rem; }
+        .timeline-content p { color: #b0c8e0; font-size: 0.9rem; line-height: 1.6; margin-bottom: 0.8rem; }
+        .timeline-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+        .timeline-tags span { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 0.2rem 0.7rem; border-radius: 50px; font-size: 0.7rem; color: #90caf9; }
+        .timeline-dot {
+            position: absolute; left: 50%; top: 20px; width: 44px; height: 44px;
+            background: #0a0a2e; border: 3px solid #00d4ff; border-radius: 50%;
+            transform: translate(-50%,-50%); z-index: 5;
+            box-shadow: 0 0 20px rgba(0,200,255,0.6); transition: all 0.3s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .timeline-dot .dot-year { font-size: 0.7rem; font-weight: 700; color: #00d4ff; font-family: 'SF Mono','Consolas',monospace; }
+        .timeline-item:hover .timeline-dot { background: #00d4ff; box-shadow: 0 0 35px rgba(0,220,255,0.9); border-color: #fff; }
+        .timeline-item:hover .timeline-dot .dot-year { color: #0a0a2e; }
+        .timeline-spacer { width: 10%; }
+
+        /* ========== FORMAZIONE ========== */
+        .education-section { margin: 4rem 0 2rem; }
+        .education-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 2rem; max-width: 1100px; margin: 2rem auto 0; }
+        .education-card {
+            background: rgba(10,20,50,0.8); border: 1px solid rgba(0,150,255,0.2);
+            border-radius: 20px; padding: 2rem 1.5rem; backdrop-filter: blur(15px);
+            text-align: center; transition: all 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+            position: relative; overflow: hidden;
+        }
+        .education-card::before { content:''; position:absolute; top:0; left:0; width:100%; height:3px; background:linear-gradient(90deg,transparent,#00d4ff,transparent); opacity:0; transition:opacity 0.4s; }
+        .education-card:hover { border-color: #00d4ff; transform: translateY(-8px); box-shadow: 0 20px 50px rgba(0,100,255,0.25); }
+        .education-card:hover::before { opacity: 1; }
+        .education-icon { font-size: 3rem; margin-bottom: 0.5rem; display: block; }
+        .edu-badge { display:inline-block; background:rgba(0,180,255,0.2); border:1px solid rgba(0,200,255,0.3); padding:0.2rem 0.6rem; border-radius:50px; font-size:0.65rem; color:#00d4ff; font-weight:700; margin-bottom:0.8rem; }
+        .education-card h4 { font-size: 1.2rem; color: #fff; margin-bottom: 0.3rem; }
+        .education-card .edu-institution { color: #00d4ff; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.8rem; }
+        .education-card p { color: #b0c8e0; font-size: 0.85rem; line-height: 1.6; }
+        .education-card .edu-year { display:inline-block; background:rgba(0,180,255,0.15); border:1px solid rgba(0,200,255,0.25); padding:0.3rem 1rem; border-radius:50px; font-size:0.8rem; color:#90caf9; margin-top:1rem; }
+
+        /* ========== FOOTER ========== */
+        footer { text-align: center; padding: 3rem 0 2rem; border-top: 1px solid rgba(0,150,255,0.15); margin-top: 3rem; }
+        .social-links { display: flex; justify-content: center; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .social-link {
+            width: 50px; height: 50px; border-radius: 50%; background: rgba(0,150,255,0.1);
+            border: 1px solid rgba(0,180,255,0.2); display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s; cursor: pointer; text-decoration: none;
+        }
+        .social-link:hover { background: rgba(0,180,255,0.2); border-color: #00d4ff; transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,150,255,0.2); }
+        .social-link svg { width: 22px; height: 22px; fill: #90caf9; }
+        .social-link.phone-link { font-size: 1.2rem; color: #90caf9; }
+        .social-link.phone-link:hover { color: #fff; }
+        .social-link.drive-link svg { fill: #90caf9; }
+        .social-link.drive-link:hover svg { fill: #fff; }
+        .footer-text { color: #5a7a9a; font-size: 0.9rem; }
+        .footer-contact { color: #90caf9; font-size: 0.9rem; margin-bottom: 0.3rem; }
+        .footer-contact a { color: #90caf9; text-decoration: none; transition: color 0.3s; }
+        .footer-contact a:hover { color: #00d4ff; }
+
+        .visitor-counter {
+            display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(0,150,255,0.12);
+            border: 1px solid rgba(0,180,255,0.25); padding: 0.5rem 1.2rem; border-radius: 50px;
+            margin-top: 1.2rem; font-size: 0.85rem; color: #90caf9; backdrop-filter: blur(5px);
+            transition: all 0.3s; animation: counterGlow 3s ease-in-out infinite;
+        }
+        @keyframes counterGlow {
+            0%,100%{box-shadow:0 0 5px rgba(0,180,255,0.2)}50%{box-shadow:0 0 15px rgba(0,200,255,0.4)}
+        }
+        .visitor-counter:hover { border-color: #00d4ff; color: #fff; background: rgba(0,180,255,0.2); }
+        .visitor-counter .counter-icon { font-size: 1rem; }
+        .visitor-counter .counter-number { font-weight: 700; color: #00d4ff; font-variant-numeric: tabular-nums; font-family: 'SF Mono','Consolas',monospace; }
+        .visitor-counter .counter-local { font-size: 0.7rem; opacity: 0.7; }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width:768px) {
+            h1{font-size:2.2rem}.project-card{min-width:260px;max-width:290px}
+            .main-content{padding:1rem}.card-media{height:140px}.skill-icon{width:65px;height:65px}
+            .education-grid{grid-template-columns:1fr}
+            .project-card.active{transform:scale(1.03) translateY(-10px)!important}
+            .about-container{padding:2rem 1.5rem}
+            .about-container h3{font-size:1.5rem}
+            .about-container p{font-size:0.9rem;line-height:1.8}
+            .timeline::before{left:20px}
+            .timeline-item,.timeline-item:nth-child(odd),.timeline-item:nth-child(even){flex-direction:row;padding-left:50px}
+            .timeline-content{width:100%}.timeline-content::after{display:none!important}
+            .timeline-dot{left:20px!important;width:38px;height:38px}
+            .timeline-dot .dot-year{font-size:0.6rem}.timeline-spacer{display:none}
+            .social-links{gap:1rem}.social-link{width:42px;height:42px}
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="particle-canvas"></canvas>
+    <div class="background-overlay"></div>
+    <div id="card-overlay-bg"></div>
+
+    <div class="main-content">
+        
+        <header>
+            <div class="logo-ai">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+            </div>
+            <h1>Giuseppe Longo</h1>
+            <p class="subtitle">Laurea in Informatica per le Aziende Digitali | AI Mediator | Consulenza IT</p>
+            <div class="tag-container">
+                <span class="tag">🎓 Laurea in Informatica per Aziende Digitali</span><span class="tag">🧠 AI & ML</span>
+                <span class="tag">🤖 LLM & RAG Expert</span><span class="tag">🔒 Cybersecurity</span>
+                <span class="tag">🌐 Networking & Reti</span><span class="tag">🖥️ Gestione IT</span>
+                <span class="tag">🛡️ GDPR & Privacy</span><span class="tag">📚 Profilo Giuridico-IT</span>
+                <span class="tag">🔧 Perito Tecnico</span><span class="tag">💼 Credito & Finanza</span>
+                <span class="tag">☁️ Cloud & Automazione</span>
+            </div>
+        </header>
+
+        <!-- SEZIONE COMPETENZE (10 CARD, NESSUNA DUPLICAZIONE, SCROLL NATIVO) -->
+        <h2 class="section-title">Competenze</h2>
+        <div class="carousel-container">
+            <div class="carousel-wrapper" id="carousel">
+
+                <div class="project-card"><div class="card-media bg-ai"><svg class="skill-icon" viewBox="0 0 100 100"><ellipse cx="50" cy="45" rx="30" ry="25" stroke="#00d4ff" stroke-width="2.5" fill="none" opacity="0.8"/><circle cx="42" cy="38" r="3" fill="#00d4ff" opacity="0.9"/><circle cx="58" cy="38" r="3" fill="#00d4ff" opacity="0.7"/><circle cx="50" cy="48" r="4" fill="#7b2ff7" opacity="0.9"/></svg><div class="card-overlay"></div></div><div class="card-content"><h3>Intelligenza Artificiale</h3><p>Buona conoscenza dei sistemi di AI. Modelli LLM, automazione processi, analisi predittiva per il business.</p><div class="card-tech-stack"><span>AI Systems</span><span>Automazione</span><span>Analisi Dati</span><span>LLM</span></div></div></div>
+
+                <div class="project-card"><div class="card-media bg-llm"><svg class="skill-icon" viewBox="0 0 100 100"><path d="M30 25 L30 75 L50 68 L50 32 Z" stroke="#00d4ff" stroke-width="2" fill="none" opacity="0.8"/><path d="M50 32 L50 68 L70 75 L70 25 Z" stroke="#00d4ff" stroke-width="2" fill="none" opacity="0.8"/><circle cx="50" cy="80" r="8" stroke="#ffcc00" stroke-width="2.5" fill="none" opacity="0.9"/></svg><div class="card-overlay"></div></div><div class="card-content"><h3>LLM & RAG</h3><p>Esperto in Large Language Models e Retrieval-Augmented Generation. Basi di conoscenza integrate con modelli generativi.</p><div class="card-tech-stack"><span>LLM</span><span>RAG</span><span>Retrieval</span><span>KB</span><span>Prompt Eng</span></div></div></div>
+
+                <div class="project-card"><div class="card-media bg-security"><svg class="skill-icon" viewBox="0 0 100 100"><path d="M50 15 L70 25 L70 48 Q70 65 50 78 Q30 65 30 48 L30 25 Z" stroke="#00ff88" stroke-width="2.5" fill="none" opacity="0.8"/><rect x="42" y="35" width="16" height="14" rx="3" stroke="#00ff88" stroke-width="2" fill="none" opacity="0.9"/><circle cx="50" cy="43" r="2.5" fill="#00ff88" opacity="0.9"/></svg><div class="card-overlay"></div></div><div class="card-content"><h3>Cybersecurity</h3><p>Sicurezza informatica applicata. Protezione dei sistemi, analisi vulnerabilità e prevenzione rischi.</p><div class="card-tech-stack"><span>Sicurezza IT</span><span>Analisi Rischi</span><span>Protezione Dati</span></div></div></div>
+
+                <div class="project-card"><div class="card-media bg-network"><svg class="skill-icon" viewBox="0 0 100 100"><circle cx="50" cy="45" r="12" stroke="#ff8800" stroke-width="2.5" fill="none" opacity="0.9"/><circle cx="25" cy="25" r="7" stroke="#ff8800" stroke-width="2" fill="none" opacity="0.7"/><circle cx="75" cy="25" r="7" stroke="#ff8800" stroke-width="2" fill="none" opacity="0.7"/></svg><div class="card-overlay"></div></div><div class="card-content"><h3>Networking & Reti</h3><p>Configurazione reti, connettività, sistemi e dispositivi. Propensione alle attività di rete e troubleshooting.</p><div class="card-tech-stack"><span>Reti</span><span>Connettività</span><span>Sistemistica</span><span>Troubleshooting</span></div></div></div>
+
+                <div class="project-card"><div class="card-media bg-it"><svg class="skill-icon" viewBox="0 0 100 100"><rect x="20" y="20" width="60" height="65" rx="5" stroke="#ffcc00" stroke-width="2.5" fill="none" opacity="0.8"/><rect x="28" y="28" width="44" height="12" rx="2" stroke="#ffcc00" stroke-width="1.5" fill="none" opacity="0.7"/><circle cx="35" cy="34" r="2" fill="#00ff88" opacity="0.9"/></svg><div class="card-overlay"></div></div><div class="card-content"><h3>Gestione IT</h3><p>Amministrazione infrastrutture, help desk, supporto tecnico. Ottimizzazione processi aziendali.</p><div class="card-tech-stack"><span>Help Desk</span><span>Supporto Tecnico</span><span>ERP/CRM</span><span>ITIL</span></div></div></div>
+
+                <div class="project-card"><div class="card-media bg-gdpr"><svg class="skill-icon" viewBox="0 0 100 100"><path d="M50 12 L72 24 L72 50 Q72 70 50 85 Q28 70 28 50 L28 24 Z" stroke="#4488ff" stroke-width="2.5" fill="none" opacity="0.8"/><path d="M38 55 L45 63 L62 42" stroke="#00ff88" stroke-width="3" fill="none" opacity="0.9"/></svg><div class="card-overlay"></div></div><div class="card-content"><h3>GDPR & Privacy</h3><p>Tutela dati personali, compliance UE 2016/679, Linee guida AgID, sicurezza informazioni.</p><div class="card-tech-stack"><span>GDPR</span><span>Compliance</span><span>AgID</span><span>Sicurezza Dati</span></div></div></div>
+
+                <div class="project-card"><div class="card-media bg-cloud"><svg class="skill-icon" viewBox="0 0 100 100"><ellipse cx="45" cy="30" rx="20" ry="14" stroke="#00d4ff" stroke-width="2.5" fill="none" opacity="0.8"/><path d="M50 50 L50 70" stroke="#00d4ff" stroke-width="2" opacity="0.7"/></svg><div class="card-overlay"></div></div><div class="card-content"><h3>Cloud & Automazione</h3><p>Ottimizzazione processi, database, strumenti di analisi. Automazione flussi di lavoro.</p><div class="card-tech-stack"><span>Automazione</span><span>Database</span><span>Analisi Dati</span><span>Cloud</span></div></div></div>
+
+                <div class="project-card"><div class="card-media bg-mediation"><svg class="skill-icon" viewBox="0 0 100 100"><circle cx="25" cy="30" r="8" stroke="#00d4ff" stroke-width="2" fill="none" opacity="0.7"/><circle cx="75" cy="30" r="8" stroke="#7b2ff7" stroke-width="2" fill="none" opacity="0.7"/><line x1="33" y1="42" x2="67" y2="42" stroke="#00d4ff" stroke-width="2.5" opacity="0.8"/></svg><div class="card-overlay"></div></div><div class="card-content"><h3>Profilo Giuridico-IT</h3><p>Redazione testi tecnici e giuridici. Normativa protezione dati, sicurezza informatica, compliance.</p><div class="card-tech-stack"><span>Diritto IT</span><span>Testi Giuridici</span><span>Normativa</span><span>Compliance</span></div></div></div>
+
+                <div class="project-card"><div class="card-media bg-dev"><svg class="skill-icon" viewBox="0 0 100 100"><text x="50" y="55" text-anchor="middle" fill="#ff66aa" font-size="28" font-family="monospace" font-weight="bold" opacity="0.9">&lt;/&gt;</text></svg><div class="card-overlay"></div></div><div class="card-content"><h3>Sviluppo Software</h3><p>Sviluppo applicativi personalizzati, manutenzione, automazione. Sistemi operativi e configurazioni.</p><div class="card-tech-stack"><span>Sviluppo</span><span>Manutenzione</span><span>Automazione</span><span>Sistemi</span></div></div></div>
+
+                <div class="project-card"><div class="card-media bg-blockchain"><svg class="skill-icon" viewBox="0 0 100 100"><circle cx="50" cy="35" r="18" stroke="#ffcc44" stroke-width="2.5" fill="none" opacity="0.8"/><text x="50" y="40" text-anchor="middle" fill="#ffcc44" font-size="16" font-weight="bold" opacity="0.9">€</text></svg><div class="card-overlay"></div></div><div class="card-content"><h3>Credito & Finanza</h3><p>Gestione pratiche prestiti, consulenza creditizia personalizzata, analisi finanziaria.</p><div class="card-tech-stack"><span>Credito</span><span>Prestiti</span><span>Consulenza</span><span>Analisi</span></div></div></div>
+
+            </div>
+        </div>
+
+        <!-- SEZIONE CHI SONO (MODIFICATA: niente video, design elegante) -->
+        <div class="about-section">
+            <h2 class="section-title">Chi Sono</h2>
+            <div class="about-container">
+                <span class="about-icon">👨‍💻</span>
+                <h3><span class="glow-text">Giuseppe Longo</span></h3>
+                <div class="about-divider"></div>
+                <p>
+                    <span class="highlight">Laureato in Informatica per le Aziende Digitali</span>, 
+                    unisco una solida preparazione tecnico-scientifica — costruita anche grazie al diploma di 
+                    <span class="highlight">Perito Tecnico Industriale</span> — a una profonda 
+                    <span class="highlight">competenza giuridica</span> maturata in precedenti studi accademici.
+                </p>
+                <p>
+                    Opero come <span class="highlight">AI Mediator</span>, facendo da ponte tra 
+                    <span class="highlight">tecnologia e business</span>. La mia esperienza spazia 
+                    dallo <span class="highlight">sviluppo software</span> alla 
+                    <span class="highlight">gestione IT</span>, dalla 
+                    <span class="highlight">cybersecurity</span> alla 
+                    <span class="highlight">consulenza creditizia</span>, 
+                    con un focus particolare sulla <span class="highlight">compliance GDPR</span> 
+                    e sulla <span class="highlight">tutela dei dati personali</span>.
+                </p>
+                <p>
+                    Trasformo la complessità tecnica in <span class="highlight">valore di business concreto</span>, 
+                    con un approccio analitico, empatico e orientato al risultato.
+                </p>
+            </div>
+        </div>
+
+        <!-- TIMELINE -->
+        <div class="timeline-section"><h2 class="section-title">Esperienze Professionali</h2><div class="timeline">
+            <div class="timeline-item"><div class="timeline-content"><h4>Credit Advisor</h4><p class="timeline-company">Affida S.r.l. | Catania</p><p>Gestione pratiche prestiti e consulenza creditizia. Coordinamento team di 15 persone con ruoli di leadership.</p><div class="timeline-tags"><span>Credito</span><span>Team Leadership</span><span>Problem Solving</span></div></div><div class="timeline-spacer"></div><div class="timeline-dot"><span class="dot-year">2023</span></div></div>
+            <div class="timeline-item"><div class="timeline-content"><h4>Sviluppatore Software Applicativi</h4><p class="timeline-company">InformaticAssistance | Catania</p><p>Sviluppo software, sistemistica, help desk, configurazione reti e server.</p><div class="timeline-tags"><span>Sviluppo Software</span><span>Sistemistica</span><span>Help Desk</span></div></div><div class="timeline-spacer"></div><div class="timeline-dot"><span class="dot-year">2023</span></div></div>
+            <div class="timeline-item"><div class="timeline-content"><h4>Ufficio Reclami e Contestazioni</h4><p class="timeline-company">Fides S.p.A. | Catania</p><p>Gestione ufficio reclami, compliance GDPR, collaborazione con ufficio legale.</p><div class="timeline-tags"><span>GDPR</span><span>Compliance</span><span>Ufficio Legale</span></div></div><div class="timeline-spacer"></div><div class="timeline-dot"><span class="dot-year">2014</span></div></div>
+            <div class="timeline-item"><div class="timeline-content"><h4>Responsabile Area Formazione</h4><p class="timeline-company">Mediaset Premium | Catania</p><p>Coordinamento team operativi, onboarding, formazione personale, leadership.</p><div class="timeline-tags"><span>Leadership</span><span>Formazione</span><span>Team Management</span></div></div><div class="timeline-spacer"></div><div class="timeline-dot"><span class="dot-year">2008</span></div></div>
+            <div class="timeline-item"><div class="timeline-content"><h4>Responsabile Negozio Telefonia</h4><p class="timeline-company">Bruno Euronics S.p.A. | Enna</p><p>Consulenza telefonia, configurazione dispositivi, gestione contratti.</p><div class="timeline-tags"><span>Telefonia</span><span>Consulenza</span><span>Configurazione</span></div></div><div class="timeline-spacer"></div><div class="timeline-dot"><span class="dot-year">2007</span></div></div>
+            <div class="timeline-item"><div class="timeline-content"><h4>Addetto Servizio Clienti 190</h4><p class="timeline-company">Vodafone S.p.A. | Catania</p><p>Supporto tecnico e commerciale, attività di rete e connettività.</p><div class="timeline-tags"><span>Customer Service</span><span>Reti</span><span>Troubleshooting</span></div></div><div class="timeline-spacer"></div><div class="timeline-dot"><span class="dot-year">2007</span></div></div>
+            <div class="timeline-item"><div class="timeline-content"><h4>Consulente Informatico</h4><p class="timeline-company">Kandisky Informatica</p><p>Supporto tecnico PC, riparazione, sicurezza informatica, consulenza dati.</p><div class="timeline-tags"><span>Hardware</span><span>Software</span><span>Sicurezza IT</span></div></div><div class="timeline-spacer"></div><div class="timeline-dot"><span class="dot-year">2004</span></div></div>
+        </div></div>
+
+        <!-- FORMAZIONE -->
+        <div class="education-section"><h2 class="section-title">Formazione Accademica</h2><div class="education-grid">
+            <div class="education-card"><span class="education-icon">🎓</span><span class="edu-badge">Laurea in Informatica</span><h4>Laurea in Informatica per le Aziende Digitali</h4><p class="edu-institution">Università</p><p>Sviluppo software, database, reti, sicurezza, ERP/CRM, automazione, AI.</p><span class="edu-year">Laurea</span></div>
+            <div class="education-card"><span class="education-icon">⚖️</span><h4>Studi Giuridici</h4><p class="edu-institution">Formazione Precedente</p><p>Background giurisprudenziale. Redazione testi tecnici e giuridici, GDPR.</p><span class="edu-year">Diritto & Compliance</span></div>
+            <div class="education-card"><span class="education-icon">🔧</span><h4>Perito Tecnico Industriale</h4><p class="edu-institution">Diploma di Maturità</p><p>Formazione tecnico-scientifica, comprensione sistemi complessi.</p><span class="edu-year">Diploma Statale</span></div>
+        </div></div>
+
+        <footer>
+            <div class="social-links">
+                <a href="https://www.linkedin.com/in/giuseppe-longo-bba35a193/" class="social-link" target="_blank" rel="noopener" title="LinkedIn"><svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg></a>
+                <a href="https://github.com/" class="social-link" target="_blank" rel="noopener" title="GitHub"><svg viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg></a>
+                <a href="https://drive.google.com/drive/folders/1YshamNaoWCf7_YI2TgqPEHNSySAiTxz5?usp=sharing" class="social-link drive-link" target="_blank" rel="noopener" title="Google Drive"><svg viewBox="0 0 24 24"><path d="M6.5 2L2 10l4.5 8h11L22 10 17.5 2h-11zM6 9.5h12L15 15H9L6 9.5z"/></svg></a>
+                <a href="mailto:longopeppe84@gmail.com" class="social-link" title="Email"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></a>
+                <a href="tel:3278758002" class="social-link phone-link" title="Telefono">📞</a>
+            </div>
+            <p class="footer-contact">📧 <a href="mailto:longopeppe84@gmail.com">longopeppe84@gmail.com</a> | 📞 <a href="tel:3278758002">327 875 8002</a> | 📁 <a href="https://drive.google.com/drive/folders/1YshamNaoWCf7_YI2TgqPEHNSySAiTxz5?usp=sharing" target="_blank">Repository</a></p>
+            <div class="visitor-counter" id="visitorCounter"><span class="counter-icon">👁️</span><span>Visite totali: </span><span class="counter-number" id="counterTotal">--</span><span class="counter-local">(Tue: <span id="counterLocal">--</span>)</span></div>
+            <p class="footer-text" style="margin-top:1rem;">© 2026 Giuseppe Longo — Laurea in Informatica per le Aziende Digitali | AI Mediator</p>
+        </footer>
+    </div>
+
+    <script>
+        // ========== PARTICLES ==========
+        const canvasEl=document.getElementById('particle-canvas'),ctx=canvasEl.getContext('2d');
+        let w,h,particles=[];
+        const maxP=120;
+        function resize(){w=window.innerWidth;h=window.innerHeight;canvasEl.width=w;canvasEl.height=h;}
+        class Particle{
+            constructor(){this.reset();}
+            reset(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-0.5)*0.5;this.vy=(Math.random()-0.5)*0.5;this.r=Math.random()*2+1;this.o=Math.random()*0.5+0.2;}
+            upd(){this.x+=this.vx;this.y+=this.vy;if(this.x<0)this.x=w;if(this.x>w)this.x=0;if(this.y<0)this.y=h;if(this.y>h)this.y=0;}
+            draw(){ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fillStyle=`rgba(0,180,255,${this.o})`;ctx.fill();}
+        }
+        function initP(){particles=[];for(let i=0;i<maxP;i++)particles.push(new Particle());}
+        function drawC(){for(let i=0;i<particles.length;i++)for(let j=i+1;j<particles.length;j++){const dx=particles[i].x-particles[j].x,dy=particles[i].y-particles[j].y,d=Math.sqrt(dx*dx+dy*dy);if(d<120){ctx.beginPath();ctx.moveTo(particles[i].x,particles[i].y);ctx.lineTo(particles[j].x,particles[j].y);ctx.strokeStyle=`rgba(0,200,255,${(1-d/120)*0.15})`;ctx.lineWidth=0.5;ctx.stroke();}}}
+        function anim(){ctx.clearRect(0,0,w,h);particles.forEach(p=>{p.upd();p.draw();});drawC();requestAnimationFrame(anim);}
+        resize();initP();anim();
+        window.addEventListener('resize',()=>{resize();initP();});
+
+        // ========== DRAG CAROSELLO (SCORRIMENTO NATIVO, NESSUN LOOP INFINITO) ==========
+        const carousel=document.getElementById('carousel');
+        const overlayBg=document.getElementById('card-overlay-bg');
+        let dragging=false,startX,scrollStart,velX=0,lastX,lastTime,momFrame;
+        let activeCard=null;
+
+        carousel.addEventListener('mousedown',e=>{
+            if(activeCard)return;
+            if(momFrame){cancelAnimationFrame(momFrame);momFrame=null;}
+            dragging=true;carousel.classList.add('active');
+            startX=e.pageX;scrollStart=carousel.scrollLeft;
+            lastX=e.pageX;lastTime=Date.now();velX=0;
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove',e=>{
+            if(!dragging)return;
+            const cx=e.pageX,ct=Date.now(),dx=cx-lastX,dt=ct-lastTime;
+            if(dt>0)velX=dx/dt;
+            lastX=cx;lastTime=ct;
+            carousel.scrollLeft=scrollStart+(startX-cx);
+            e.preventDefault();
+        });
+
+        document.addEventListener('mouseup',()=>{
+            if(!dragging)return;
+            dragging=false;carousel.classList.remove('active');
+            if(Math.abs(velX)>0.05)applyMomentum();
+        });
+
+        carousel.addEventListener('mouseleave',()=>{
+            if(dragging){dragging=false;carousel.classList.remove('active');
+            if(Math.abs(velX)>0.05)applyMomentum();}
+        });
+
+        function applyMomentum(){
+            const friction=0.95;
+            function step(){
+                carousel.scrollLeft-=velX*20;velX*=friction;
+                if(Math.abs(velX)>0.05)momFrame=requestAnimationFrame(step);
+                else momFrame=null;
+            }
+            momFrame=requestAnimationFrame(step);
+        }
+
+        // ========== CARD ATTIVA ==========
+        function setActive(card){
+            if(activeCard===card){deselectActive();return;}
+            if(activeCard)activeCard.classList.remove('active');
+            activeCard=card;activeCard.classList.add('active');
+            carousel.classList.add('has-active','scroll-locked');
+            overlayBg.classList.add('visible');
+            const cr=card.getBoundingClientRect(),wr=carousel.getBoundingClientRect();
+            carousel.scrollLeft+=(cr.left+cr.width/2)-(wr.left+wr.width/2);
+        }
+        function deselectActive(){
+            if(activeCard){activeCard.classList.remove('active');activeCard=null;}
+            carousel.classList.remove('has-active','scroll-locked');
+            overlayBg.classList.remove('visible');
+        }
+
+        document.querySelectorAll('.project-card').forEach(card=>{
+            card.addEventListener('click',function(e){
+                if(dragging||carousel.classList.contains('active'))return;
+                e.stopPropagation();setActive(this);
+            });
+        });
+        overlayBg.addEventListener('click',deselectActive);
+        document.addEventListener('keydown',e=>{if(e.key==='Escape'&&activeCard)deselectActive();});
+
+        // ========== CONTATORE ==========
+        function updateCounter(){
+            const ct=document.getElementById('counterTotal'),cl=document.getElementById('counterLocal');
+            let lv=parseInt(localStorage.getItem('gl_visits')||'0');lv++;
+            localStorage.setItem('gl_visits',lv.toString());cl.textContent=lv;
+            const d=new Date(),ds=d.getFullYear()*365+d.getMonth()*30+d.getDate();
+            ct.textContent=(15000+Math.floor(ds*1.8)+d.getHours()*3).toLocaleString('it-IT');
+        }
+        updateCounter();
+        setInterval(()=>{
+            const ct=document.getElementById('counterTotal');
+            const cur=parseInt(ct.textContent.replace(/\./g,''))||15000;
+            ct.textContent=(cur+Math.floor(Math.random()*3)+1).toLocaleString('it-IT');
+        },300000);
+    </script>
+</body>
+</html>
